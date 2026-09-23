@@ -511,7 +511,7 @@ button {
   bottom: -30px
 }
 
-..stat-top {
+.stat-top {
   display: flex;
   justify-content: space-between;
   align-items: center
@@ -925,69 +925,6 @@ button {
 
 
 /* ==========================================================
-   Face-recognition check-in camera
-   ========================================================== */
-.camera-box {
-  height: 260px;
-  background: #111a31;
-  border-radius: 16px;
-  overflow: hidden;
-  position: relative;
-  display: grid;
-  place-items: center;
-  color: #fff
-}
-
-.camera-box video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover
-}
-
-.scan {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border: 2px solid #69e8c1;
-  border-radius: 20px;
-  box-shadow: 0 0 0 999px rgba(0, 0, 0, .2)
-}
-
-.scan:after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 35%;
-  height: 2px;
-  background: #6af1c9;
-  box-shadow: 0 0 12px #6af1c9;
-  animation: scan 2s infinite
-}
-
-@keyframes scan {
-  0% {
-    top: 10%
-  }
-
-  100% {
-    top: 90%
-  }
-}
-
-.verify-state {
-  text-align: center;
-  padding: 16px;
-  font-weight: 700
-}
-
-.verify-state i {
-  color: var(--success);
-  margin-left: 7px
-}
-
-
-/* ==========================================================
    Toast notifications
    ========================================================== */
 .toast-wrap {
@@ -1275,11 +1212,6 @@ body.dark {
   .form-control,
   button {
     min-height: 44px
-  }
-
-  .camera-box video {
-    max-width: 100%;
-    height: auto
   }
 
   .sidebar {
@@ -1888,7 +1820,6 @@ async function loadAttendanceLive() {
     late: a.status === 'late' ? 'نعم' : 'لا',
     status: a.status === 'present' ? 'حاضر' : a.status === 'late' ? 'متأخر' : a.status === 'completed' ? 'مكتمل' : a.status === 'absent' ? 'غائب' : 'قيد العمل',
     location: a.latitude ? `GPS ${Number(a.latitude).toFixed(4)}, ${Number(a.longitude).toFixed(4)}` : '—',
-    face: a.face_status === 'demo_verified' ? 'تم التحقق' : '—',
     dbId: a.id
   }));
   data.attendance = mapped;
@@ -1896,7 +1827,7 @@ async function loadAttendanceLive() {
 }
 
 function attendanceTable(rows) {
-  return `<div class="table-wrap"><table class="data-table"><thead><tr><th>الموظف</th><th>الدخول</th><th>الخروج</th><th>الساعات</th><th>التأخير</th><th>الحالة</th><th>الموقع GPS</th><th>Face Verification</th><th>إجراء</th></tr></thead><tbody>${rows.map(a=>`<tr><td><div class="person"><span class="avatar">${a.employee[0]}</span><b>${a.employee}</b></div></td><td class="ltr">${a.in}</td><td class="ltr">${a.out}</td><td>${a.hours}</td><td>${a.late}</td><td><span class="badge ${a.status==='حاضر'?'success':a.status==='متأخر'?'warning':a.status==='غائب'?'danger':'info'}">${a.status}</span></td><td>${a.location} <i class="fa-solid fa-location-dot muted"></i></td><td><span class="badge ${a.face==='تم التحقق'?'success':'neutral'}">${a.face}</span></td><td><button class="action-btn" onclick="showAttendanceDetails('${a.employee}','${a.in}','${a.out}','${a.location}')"><i class="fa-solid fa-eye"></i></button><button class="action-btn" onclick="requestMissingPunch('${a.employee}')"><i class="fa-solid fa-clock-rotate-left"></i></button></td></tr>`).join('')}</tbody></table></div>`
+  return `<div class="table-wrap"><table class="data-table"><thead><tr><th>الموظف</th><th>الدخول</th><th>الخروج</th><th>الساعات</th><th>التأخير</th><th>الحالة</th><th>الموقع GPS</th><th>إجراء</th></tr></thead><tbody>${rows.map(a=>`<tr><td><div class="person"><span class="avatar">${a.employee[0]}</span><b>${a.employee}</b></div></td><td class="ltr">${a.in}</td><td class="ltr">${a.out}</td><td>${a.hours}</td><td>${a.late}</td><td><span class="badge ${a.status==='حاضر'?'success':a.status==='متأخر'?'warning':a.status==='غائب'?'danger':'info'}">${a.status}</span></td><td>${a.location} <i class="fa-solid fa-location-dot muted"></i></td><td><button class="action-btn" onclick="showAttendanceDetails('${a.employee}','${a.in}','${a.out}','${a.location}')"><i class="fa-solid fa-eye"></i></button><button class="action-btn" onclick="requestMissingPunch('${a.employee}')"><i class="fa-solid fa-clock-rotate-left"></i></button></td></tr>`).join('')}</tbody></table></div>`
 }
 
 function filterAttendance() {
@@ -2070,7 +2001,7 @@ function reportsView() {
 }
 
 function profileView() {
-  return pageHead('ملفي الشخصي', 'بياناتك الأساسية ومعلومات التواصل') + `<div class="card"><div class="form-grid"><div class="form-group"><label>الاسم الكامل</label><input id="profileFullName" class="form-control" value="${session.name||''}"></div><div class="form-group"><label>البريد الإلكتروني</label><input class="form-control ltr" value="${session.email||''}" disabled></div><div class="form-group"><label>الصورة الشخصية للتحقق</label><div id="profilePhotoPreview" style="margin-bottom:10px"></div><input id="profilePhoto" type="file" accept="image/*" class="form-control" onchange="previewProfilePhoto(this)"><small class="muted">الصورة الموجودة هنا هي نفسها التي سيقارن بها النظام صورة الحضور.</small></div><div class="form-group"><label>الهاتف</label><input id="profilePhone" class="form-control ltr"></div><div class="form-group"><label>الرقم الوظيفي</label><input id="profileCode" class="form-control ltr" value="—" disabled></div></div><button class="primary-btn" onclick="saveProfileLive()">حفظ التغييرات</button></div>`
+  return pageHead('ملفي الشخصي', 'بياناتك الأساسية ومعلومات التواصل') + `<div class="card"><div class="form-grid"><div class="form-group"><label>الاسم الكامل</label><input id="profileFullName" class="form-control" value="${session.name||''}"></div><div class="form-group"><label>البريد الإلكتروني</label><input class="form-control ltr" value="${session.email||''}" disabled></div><div class="form-group"><label>الصورة الشخصية</label><div id="profilePhotoPreview" style="margin-bottom:10px"></div><input id="profilePhoto" type="file" accept="image/*" class="form-control" onchange="previewProfilePhoto(this)"></div><div class="form-group"><label>الهاتف</label><input id="profilePhone" class="form-control ltr"></div><div class="form-group"><label>الرقم الوظيفي</label><input id="profileCode" class="form-control ltr" value="—" disabled></div></div><button class="primary-btn" onclick="saveProfileLive()">حفظ التغييرات</button></div>`
 }
 async function loadProfileLive() {
   let {
@@ -2520,49 +2451,13 @@ async function saveMission() {
 
 
 // ==========================================================
-// Check-in/out modal & face-recognition camera
+// Check-in/out modal (GPS geofence verification)
 // ==========================================================
 function openAttendanceModal() {
-  openModal(`<div class="modal-head"><h3>تسجيل الحضور</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="camera-box"><video id="camera" autoplay muted playsinline></video><div class="scan"></div><span id="cameraPlaceholder"><i class="fa-solid fa-camera" style="font-size:35px"></i><br><small>التقاط صورة حقيقية للتحقق</small></span></div><div id="verifyState" class="verify-state"><i class="fa-solid fa-spinner fa-spin"></i> جاري تشغيل الكاميرا والتحقق من الوجه...<small class="muted" style="display:block;margin-top:5px">هذه محاكاة Demo وليست Face Recognition حقيقيًا</small></div><div class="card" style="margin:0;background:var(--bg);box-shadow:none"><div style="display:flex;justify-content:space-between"><span>GPS Location</span><b id="locStatus">جاري التحقق...</b></div><small id="locDetails" class="muted">يرجى السماح بالوصول إلى موقعك</small></div></div><div class="modal-foot"><button id="checkBtn" class="primary-btn" disabled onclick="completeCheckIn()">تأكيد تسجيل الحضور</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`);
-  startCamera();
+  openModal(`<div class="modal-head"><h3>تسجيل الحضور</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="card" style="margin:0;background:var(--bg);box-shadow:none"><div style="display:flex;justify-content:space-between"><span>GPS Location</span><b id="locStatus">جاري التحقق...</b></div><small id="locDetails" class="muted">يرجى السماح بالوصول إلى موقعك</small></div></div><div class="modal-foot"><button id="checkBtn" class="primary-btn" disabled onclick="completeCheckIn()">تأكيد تسجيل الحضور</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`);
   getLocation()
 }
-let cameraOk = false,
-  locationOk = false,
-  cameraStream = null,
-  capturedPhoto = null;
-
-function startCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    document.getElementById('verifyState').innerHTML = '<i class="fa-solid fa-circle-xmark"></i> هذا المتصفح لا يدعم الكاميرا';
-    return
-  }
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: 'user'
-    },
-    audio: false
-  }).then(stream => {
-    cameraStream = stream;
-    let v = document.getElementById('camera');
-    v.srcObject = stream;
-    v.onloadedmetadata = () => {
-      v.play();
-      let canvas = document.createElement('canvas');
-      canvas.width = v.videoWidth || 640;
-      canvas.height = v.videoHeight || 480;
-      canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
-      capturedPhoto = canvas.toDataURL('image/jpeg', .82);
-      cameraOk = true;
-      document.getElementById('verifyState').innerHTML = '<i class="fa-solid fa-circle-check"></i> تم التقاط الصورة الحقيقية';
-      enableCheck()
-    }
-  }).catch(() => {
-    document.getElementById('verifyState').innerHTML = '<i class="fa-solid fa-circle-xmark"></i> يجب السماح بالكاميرا لتسجيل الحضور';
-    cameraOk = false;
-    enableCheck()
-  })
-}
+let locationOk = false;
 
 function getLocation() {
   if (!navigator.geolocation) {
@@ -2595,7 +2490,7 @@ function locationDenied() {
 
 function enableCheck() {
   let b = document.getElementById('checkBtn');
-  if (b) b.disabled = !(cameraOk && locationOk)
+  if (b) b.disabled = !locationOk
 }
 async function getCurrentEmployee() {
   let {
@@ -2608,42 +2503,9 @@ async function getCurrentEmployee() {
   }
   return e
 }
-let faceModelsReady = null;
-async function ensureFaceModels() {
-  if (!window.faceapi) throw new Error('مكتبة التحقق من الوجه غير متاحة');
-  if (!faceModelsReady) {
-    let base = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-    faceModelsReady = Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(base), faceapi.nets.faceLandmark68Net.loadFromUri(base), faceapi.nets.faceRecognitionNet.loadFromUri(base)])
-  }
-  await faceModelsReady
-}
-async function compareAttendanceFace() {
-  let {
-    data: profile,
-    error
-  } = await supabaseClient.from('profiles').select('photo_path').eq('id', session.id).single();
-  if (error || !profile?.photo_path) throw new Error('ارفع صورتك الشخصية من صفحة الملف الشخصي أولًا');
-  let signed = await supabaseClient.storage.from('profile-photos').createSignedUrl(profile.photo_path, 120);
-  if (signed.error) throw signed.error;
-  await ensureFaceModels();
-  let ref = await faceapi.fetchImage(signed.data.signedUrl),
-    probe = await faceapi.fetchImage(capturedPhoto),
-    opts = new faceapi.TinyFaceDetectorOptions({
-      inputSize: 320,
-      scoreThreshold: .5
-    }),
-    a = await faceapi.detectSingleFace(ref, opts).withFaceLandmarks().withFaceDescriptor(),
-    b = await faceapi.detectSingleFace(probe, opts).withFaceLandmarks().withFaceDescriptor();
-  if (!a || !b) throw new Error('لم يتم التعرف على وجه واضح في إحدى الصورتين');
-  let distance = faceapi.euclideanDistance(a.descriptor, b.descriptor);
-  return {
-    match: distance <= .55,
-    distance
-  }
-}
 async function completeCheckIn() {
-  if (!cameraOk || !capturedPhoto || !locationOk) {
-    toast('يجب السماح بالكاميرا والموقع أولًا', 'error');
+  if (!locationOk) {
+    toast('يجب السماح بالوصول إلى الموقع أولًا', 'error');
     return
   }
   let e = await getCurrentEmployee();
@@ -2668,29 +2530,6 @@ async function completeCheckIn() {
       return
     }
   }
-  let face;
-  try {
-    face = await compareAttendanceFace()
-  } catch (err) {
-    toast(err.message, 'error');
-    return
-  }
-  if (!face.match) {
-    toast('الصورة لا تطابق الصورة الشخصية. حاول بصورة واضحة', 'error');
-    return
-  }
-  let blob = await (await fetch(capturedPhoto)).blob(),
-    path = `${session.id}/${crypto.randomUUID()}.jpg`;
-  let {
-    error: uploadError
-  } = await supabaseClient.storage.from('attendance-photos').upload(path, blob, {
-    contentType: 'image/jpeg',
-    upsert: false
-  });
-  if (uploadError) {
-    toast('تعذر رفع صورة الحضور: ' + uploadError.message, 'error');
-    return
-  }
   let now = new Date();
   let payload = {
     company_id: session.company_id,
@@ -2700,10 +2539,7 @@ async function completeCheckIn() {
     latitude: window.lastAttendanceCoords.latitude,
     longitude: window.lastAttendanceCoords.longitude,
     accuracy: window.lastAttendanceCoords.accuracy,
-    status: 'present',
-    face_status: 'face_verified',
-    face_distance: face.distance,
-    photo_path: path
+    status: 'present'
   };
   let {
     error
@@ -2712,12 +2548,11 @@ async function completeCheckIn() {
     toast('تعذر حفظ الحضور: ' + error.message, 'error');
     return
   }
-  cameraStream?.getTracks().forEach(t => t.stop());
-  data.notifications.unshift('تم تسجيل حضورك بالصورة والموقع.');
+  data.notifications.unshift('تم تسجيل حضورك بالموقع.');
   save();
   closeModal();
   openPage('attendance');
-  toast('تم تسجيل الحضور بالصورة والموقع ✓')
+  toast('تم تسجيل الحضور بالموقع ✓')
 }
 async function openCheckoutModal() {
   let e = await getCurrentEmployee();
