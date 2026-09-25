@@ -1244,11 +1244,11 @@ body.dark {
     <p class="sub">استخدم بريدك الإلكتروني أو كود الموظف للدخول</p>
     <div id="loginError" class="login-error hidden"></div>
     <form id="loginForm">
-      <div class="form-group"><label>البريد الإلكتروني أو كود الموظف</label><input id="email" class="form-control ltr" type="email" placeholder="name@company.com" required></div>
+      <div class="form-group"><label>البريد الإلكتروني أو كود الموظف</label><input id="email" class="form-control ltr" type="email" placeholder="name@company.com" autocomplete="username" autofocus required></div>
       <div class="form-group"><label>كلمة المرور</label>
         <div class="password-wrap"><input id="password" class="form-control ltr" type="password" placeholder="••••••" required><button type="button" id="togglePassword"><i class="fa-regular fa-eye"></i></button></div>
       </div>
-      <div class="login-row"><label class="check"><input type="checkbox" id="remember"> تذكرني</label><span class="link" onclick="openForgotPassword()">نسيت كلمة المرور؟</span></div><button class="primary-btn" style="width:100%;padding:14px" type="submit"><i class="fa-solid fa-arrow-left-to-bracket"></i> تسجيل الدخول</button>
+      <div class="login-row"><label class="check"><input type="checkbox" id="remember"> تذكرني</label><span class="link" onclick="openForgotPassword()">نسيت كلمة المرور؟</span></div><button id="loginSubmitBtn" class="primary-btn" style="width:100%;padding:14px" type="submit"><i class="fa-solid fa-arrow-left-to-bracket"></i> تسجيل الدخول</button>
     </form>
   </section>
 </div>
@@ -1295,119 +1295,20 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLI
 });
 
 // ==========================================================
-// Demo data seed
+// Local app state defaults (no demo/dummy records — all real
+// data comes from Supabase via the loadXLive() functions)
 // ==========================================================
 let forcePasswordChange = false;
 const KEY = 'workflow_hr_demo_v1';
-const names = ['أحمد علي', 'سارة محمد', 'خالد حسن', 'نور أحمد', 'عمر يوسف', 'ريم عبدالله', 'ياسر محمود', 'جنى سمير', 'محمد إبراهيم', 'ليان سعيد', 'حسام عادل', 'مريم طارق', 'عبدالرحمن فوزي', 'هبة مصطفى', 'إياد شريف', 'سلمى حمدي', 'وليد رجب', 'شهد خالد', 'طارق جمال', 'داليا وليد'];
 const depts = ['HR', 'Sales', 'Marketing', 'IT', 'Accounting', 'Operations', 'Customer Service', 'Management'];
-const jobs = ['أخصائي موارد بشرية', 'تنفيذي مبيعات', 'مصمم جرافيك', 'مطور برمجيات', 'محاسب أول', 'منسق عمليات', 'مسؤول خدمة عملاء', 'مدير قسم'];
 
 function seed() {
-  let employees = names.map((name, i) => ({
-    id: 'WF-' + String(1001 + i),
-    name,
-    dept: depts[i % 8],
-    job: jobs[i % 8],
-    phone: '05' + (10000000 + i * 173),
-    email: name.replace(' ', '').toLowerCase() + '@workflow.local',
-    join: '2022-' + String((i % 9) + 1).padStart(2, '0') + '-15',
-    salary: 6500 + (i % 8) * 750,
-    status: i === 6 ? 'إجازة' : 'نشط'
-  }));
   return {
-    employees,
-    attendance: employees.map((e, i) => ({
-      employee: e.name,
-      in: i < 18 ? '08:' + String(32 + i % 22).padStart(2, '0') : '—',
-      out: i < 14 ? '17:0' + i % 6 : '—',
-      hours: i < 18 ? '8 ساعات' : '—',
-      late: i % 5 === 0 ? 'نعم' : 'لا',
-      status: i === 6 ? 'إجازة' : i > 17 ? 'غائب' : i % 5 === 0 ? 'متأخر' : 'حاضر',
-      location: i < 18 ? 'المقر الرئيسي' : '—',
-      face: i < 18 ? 'تم التحقق' : '—'
-    })),
-    leaves: [{
-      id: 1,
-      employee: 'أحمد علي',
-      type: 'إجازة سنوية',
-      start: '2026-09-10',
-      end: '2026-09-12',
-      days: 3,
-      reason: 'ظروف عائلية',
-      balance: 16,
-      status: 'معلق'
-    }, {
-      id: 2,
-      employee: 'ريم عبدالله',
-      type: 'إجازة مرضية',
-      start: '2026-09-08',
-      end: '2026-09-09',
-      days: 2,
-      reason: 'موعد طبي',
-      balance: 19,
-      status: 'مقبول'
-    }, {
-      id: 3,
-      employee: 'خالد حسن',
-      type: 'طارئة',
-      start: '2026-09-15',
-      end: '2026-09-15',
-      days: 1,
-      reason: 'طارئ شخصي',
-      balance: 20,
-      status: 'مرفوض'
-    }],
-    tasks: [{
-      id: 1,
-      title: 'تحديث دليل الموظفين',
-      employee: 'سارة محمد',
-      priority: 'عالي',
-      due: '2026-09-12',
-      status: 'قيد التنفيذ'
-    }, {
-      id: 2,
-      title: 'مراجعة تقرير المبيعات',
-      employee: 'خالد حسن',
-      priority: 'متوسط',
-      due: '2026-09-14',
-      status: 'جديدة'
-    }, {
-      id: 3,
-      title: 'إطلاق حملة الخريف',
-      employee: 'نور أحمد',
-      priority: 'عاجل',
-      due: '2026-09-18',
-      status: 'قيد التنفيذ'
-    }, {
-      id: 4,
-      title: 'تجهيز أجهزة الفريق',
-      employee: 'عمر يوسف',
-      priority: 'منخفض',
-      due: '2026-09-20',
-      status: 'مكتملة'
-    }],
-    missions: [{
-      title: 'زيارة فرع الإسكندرية',
-      employee: 'محمد إبراهيم',
-      destination: 'الإسكندرية',
-      purpose: 'متابعة التشغيل',
-      start: '2026-09-08',
-      end: '2026-09-09',
-      transport: 'سيارة الشركة',
-      expenses: 850,
-      status: 'قيد التنفيذ'
-    }, {
-      title: 'مؤتمر التقنية',
-      employee: 'إياد شريف',
-      destination: 'دبي',
-      purpose: 'تمثيل الشركة',
-      start: '2026-09-20',
-      end: '2026-09-22',
-      transport: 'طيران',
-      expenses: 4200,
-      status: 'مجدولة'
-    }],
+    employees: [],
+    attendance: [],
+    leaves: [],
+    tasks: [],
+    missions: [],
     rules: {
       start: '09:00',
       end: '17:00',
@@ -1419,7 +1320,7 @@ function seed() {
       annual: 21,
       emergency: 5
     },
-    notifications: ['أحمد علي قدم طلب إجازة جديد.', 'لديك مهمة جديدة: تحديث دليل الموظفين.', 'تم تسجيل حضورك بنجاح.', 'لديك تأخير اليوم.'],
+    notifications: [],
     dark: false
   };
 }
@@ -1451,45 +1352,66 @@ function toast(msg, type = 'success') {
 // ==========================================================
 // Authentication (login / logout / invite flow)
 // ==========================================================
+let loginInFlight = false;
 async function login(e) {
   e.preventDefault();
+  if (loginInFlight) return;
   let loginId = document.getElementById('email').value.trim(),
     pass = document.getElementById('password').value,
-    x = document.getElementById('loginError');
+    x = document.getElementById('loginError'),
+    btn = document.getElementById('loginSubmitBtn'),
+    btnHTML = btn.innerHTML;
   x.classList.add('hidden');
-  let authEmail = loginId.includes('@') ? loginId : loginId.toLowerCase() + '@internal.workflow.local';
-  const {
-    data: authData,
-    error
-  } = await supabaseClient.auth.signInWithPassword({
-    email: authEmail,
-    password: pass
-  });
-  if (error) {
-    x.textContent = 'تعذر تسجيل الدخول. تحقق من كود الموظف وكلمة المرور.';
+  if (!loginId || !pass) {
+    x.textContent = 'من فضلك أدخل البريد الإلكتروني/كود الموظف وكلمة المرور.';
     x.classList.remove('hidden');
     return
   }
-  const {
-    data: profile,
-    error: profileError
-  } = await supabaseClient.from('profiles').select('*').eq('id', authData.user.id).single();
-  if (profileError || !profile) {
-    await supabaseClient.auth.signOut();
-    x.textContent = 'حساب المستخدم غير مكتمل.';
+  loginInFlight = true;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري تسجيل الدخول...';
+  try {
+    let authEmail = loginId.includes('@') ? loginId : loginId.toLowerCase() + '@internal.workflow.local';
+    const {
+      data: authData,
+      error
+    } = await supabaseClient.auth.signInWithPassword({
+      email: authEmail,
+      password: pass
+    });
+    if (error) {
+      x.textContent = 'تعذر تسجيل الدخول. تحقق من كود الموظف/البريد الإلكتروني وكلمة المرور.';
+      x.classList.remove('hidden');
+      return
+    }
+    const {
+      data: profile,
+      error: profileError
+    } = await supabaseClient.from('profiles').select('*').eq('id', authData.user.id).single();
+    if (profileError || !profile) {
+      await supabaseClient.auth.signOut();
+      x.textContent = 'حساب المستخدم غير مكتمل. تواصل مع مسؤول النظام.';
+      x.classList.remove('hidden');
+      return
+    }
+    session = {
+      id: authData.user.id,
+      email: authData.user.email,
+      role: profile.role,
+      name: profile.full_name,
+      company_id: profile.company_id
+    };
+    forcePasswordChange = !!authData.user.user_metadata?.must_change_password;
+    startApp();
+    toast(`مرحبًا بك يا ${session.name}، تم تسجيل الدخول بنجاح`);
+  } catch (err) {
+    x.textContent = 'حدث خطأ في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.';
     x.classList.remove('hidden');
-    return
+  } finally {
+    loginInFlight = false;
+    btn.disabled = false;
+    btn.innerHTML = btnHTML;
   }
-  session = {
-    id: authData.user.id,
-    email: authData.user.email,
-    role: profile.role,
-    name: profile.full_name,
-    company_id: profile.company_id
-  };
-  forcePasswordChange = !!authData.user.user_metadata?.must_change_password;
-  startApp();
-  toast(`مرحبًا بك يا ${session.name}، تم تسجيل الدخول بنجاح`);
 }
 async function logout() {
   await supabaseClient.auth.signOut();
@@ -1993,7 +1915,8 @@ async function loadPayrollLive() {
 // Rules, reports & profile
 // ==========================================================
 function rulesView() {
-  return pageHead('اللائحة الداخلية', 'إدارة قواعد الحضور والانصراف والرواتب') + `<div class="grid-2"><div class="card"><div class="card-head"><h3>قواعد الدوام</h3></div><div class="form-grid"><div class="form-group"><label>بداية الدوام</label><input id="r-start" type="time" class="form-control" value="09:00"></div><div class="form-group"><label>نهاية الدوام</label><input id="r-end" type="time" class="form-control" value="17:00"></div><div class="form-group"><label>السماح بالتأخير بالدقائق</label><input id="r-grace" type="number" class="form-control" value="15"></div><div class="form-group"><label>ساعات العمل</label><input id="r-hours" type="number" class="form-control" value="8"></div></div><button class="primary-btn" onclick="saveRules()">حفظ القواعد</button></div><div class="card"><div class="card-head"><h3>الخصومات والإضافي</h3></div><div class="form-group"><label>قيمة الساعة الإضافية</label><input id="r-overtime" type="number" class="form-control" value="1.5"></div><div class="form-group"><label>خصم التأخير</label><input id="r-late" type="number" class="form-control" value="100"></div><div class="form-group"><label>خصم الغياب</label><input id="r-absence" type="number" class="form-control" value="500"></div></div></div>`
+  let r = data.rules;
+  return pageHead('اللائحة الداخلية', 'إدارة قواعد الحضور والانصراف والرواتب') + `<div class="grid-2"><div class="card"><div class="card-head"><h3>قواعد الدوام</h3></div><div class="form-grid"><div class="form-group"><label>بداية الدوام</label><input id="r-start" type="time" class="form-control" value="${r.start}"></div><div class="form-group"><label>نهاية الدوام</label><input id="r-end" type="time" class="form-control" value="${r.end}"></div><div class="form-group"><label>السماح بالتأخير بالدقائق</label><input id="r-grace" type="number" class="form-control" value="${r.grace}"></div><div class="form-group"><label>ساعات العمل</label><input id="r-hours" type="number" class="form-control" value="${r.hours}"></div></div><button class="primary-btn" onclick="saveRules()">حفظ القواعد</button></div><div class="card"><div class="card-head"><h3>الخصومات والإضافي</h3></div><div class="form-group"><label>قيمة الساعة الإضافية</label><input id="r-overtime" type="number" class="form-control" value="${r.overtime}"></div><div class="form-group"><label>خصم التأخير</label><input id="r-late" type="number" class="form-control" value="${r.lateDeduction}"></div><div class="form-group"><label>خصم الغياب</label><input id="r-absence" type="number" class="form-control" value="${r.absenceDeduction}"></div><div class="form-group"><label>رصيد الإجازة السنوية (يوم)</label><input id="r-annual" type="number" class="form-control" value="${r.annual}"></div><div class="form-group"><label>رصيد الإجازة الطارئة (يوم)</label><input id="r-emergency" type="number" class="form-control" value="${r.emergency}"></div></div></div>`
 }
 
 function reportsView() {
@@ -2693,6 +2616,8 @@ function saveRules() {
   data.rules.overtime = +document.getElementById('r-overtime').value;
   data.rules.lateDeduction = +document.getElementById('r-late').value;
   data.rules.absenceDeduction = +document.getElementById('r-absence').value;
+  data.rules.annual = +document.getElementById('r-annual').value;
+  data.rules.emergency = +document.getElementById('r-emergency').value;
   save();
   toast('تم حفظ قواعد الحضور')
 }
@@ -2736,149 +2661,66 @@ function resetDemo() {
 // ==========================================================
 // Chart.js dashboards
 // ==========================================================
-function drawCharts(page) {
-  Object.values(charts).forEach(c => c.destroy());
-  charts = {};
-  let base = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          font: {
-            family: 'Cairo'
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false
-        },
-        ticks: {
-          font: {
-            family: 'Cairo'
-          }
-        }
-      },
-      y: {
-        grid: {
-          color: 'rgba(150,160,190,.13)'
-        },
-        ticks: {
-          font: {
-            family: 'Cairo'
-          }
+// Shared Chart.js base config + constructor, reused by every
+// module that draws real, data-driven charts (dashboard, reports,
+// allowances). All chart data below comes from Supabase queries —
+// nothing here is sample/demo data.
+let chartBase = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: {
+        font: {
+          family: 'Cairo'
         }
       }
     }
-  };
-
-  function chart(id, type, labels, ds, opts = {}) {
-    let el = document.getElementById(id);
-    if (el) charts[id] = new Chart(el, {
-      type,
-      data: {
-        labels,
-        datasets: ds
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false
       },
-      options: {
-        ...base,
-        ...opts
+      ticks: {
+        font: {
+          family: 'Cairo'
+        }
       }
-    })
+    },
+    y: {
+      grid: {
+        color: 'rgba(150,160,190,.13)'
+      },
+      ticks: {
+        font: {
+          family: 'Cairo'
+        }
+      }
+    }
   }
-  if (page === 'dashboard') {
-    chart('attendanceChart', 'line', ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'], [{
-      label: 'الحضور',
-      data: [20, 22, 21, 23, 19, 21, 21],
-      borderColor: '#2f80ed',
-      backgroundColor: 'rgba(47,128,237,.1)',
-      fill: true,
-      tension: .4
-    }, {
-      label: 'التأخير',
-      data: [3, 1, 2, 1, 4, 2, 1],
-      borderColor: '#f3a83b',
-      tension: .4
-    }]);
-    chart('deptChart', 'doughnut', depts, [{
-      data: [4, 5, 3, 3, 2, 3, 2, 2],
-      backgroundColor: ['#2f80ed', '#56ccf2', '#16a67a', '#f3a83b', '#e45757', '#54a8d8', '#bd75cf', '#93a4ba'],
-      borderWidth: 0
-    }], {
-      plugins: {
-        legend: {
-          position: 'right'
-        }
-      }
-    })
-  }
-  if (page === 'allowances') {
-    chart('allowanceChart', 'doughnut', ['المستخدم', 'المتبقي'], [{
-      data: [5, 16],
-      backgroundColor: ['#f3a83b', '#2f80ed'],
-      borderWidth: 0
-    }], {
-      plugins: {
-        legend: {
-          position: 'right'
-        }
-      }
-    })
-  }
-  if (page === 'reports') {
-    chart('reportAttendance', 'bar', ['أحد', 'اثن', 'ثلا', 'أرب', 'خمي'], [{
-      label: 'حاضر',
-      data: [21, 22, 20, 23, 21],
-      backgroundColor: '#2f80ed',
-      borderRadius: 7
-    }], {
-      plugins: {
-        legend: {
-          display: false
-        }
-      }
-    });
-    chart('leaveChart', 'doughnut', ['سنوية', 'مرضية', 'طارئة', 'أخرى'], [{
-      data: [12, 5, 4, 2],
-      backgroundColor: ['#2f80ed', '#16a67a', '#f3a83b', '#e45757'],
-      borderWidth: 0
-    }], {
-      plugins: {
-        legend: {
-          position: 'right'
-        }
-      }
-    });
-    chart('taskChart', 'bar', ['جديدة', 'قيد التنفيذ', 'مكتملة', 'متأخرة'], [{
-      label: 'المهام',
-      data: [4, 8, 16, 2],
-      backgroundColor: ['#aab0c8', '#2f80ed', '#16a67a', '#e45757'],
-      borderRadius: 7
-    }], {
-      plugins: {
-        legend: {
-          display: false
-        }
-      }
-    });
-    chart('payrollChart', 'line', ['أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس'], [{
-      label: 'صافي الرواتب',
-      data: [148, 151, 153, 156, 158.5],
-      borderColor: '#16a67a',
-      backgroundColor: 'rgba(22,166,122,.1)',
-      fill: true,
-      tension: .4
-    }], {
-      plugins: {
-        legend: {
-          display: false
-        }
-      }
-    })
-  }
+};
+
+function chart(id, type, labels, ds, opts = {}) {
+  let el = document.getElementById(id);
+  if (!el) return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el, {
+    type,
+    data: {
+      labels,
+      datasets: ds
+    },
+    options: {
+      ...chartBase,
+      ...opts
+    }
+  })
+}
+
+function drawCharts(page) {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
 }
 
 
