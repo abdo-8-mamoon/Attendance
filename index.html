@@ -1555,7 +1555,7 @@ function openPage(page) {
     if (page === 'leaves') loadLeavesLive();
     if (page === 'tasks') loadTasksLive();
     if (page === 'missions') loadMissionsLive();
-    if (page === 'payroll') loadPayrollLive();
+    if (page === 'payroll') { loadPayrollLive(); if (session.role === 'manager' && !data.employees?.length) loadEmployeesLive(); }
     if (page === 'profile') loadProfileLive();
     if (page === 'documents') loadDocumentsLive();
     if (page === 'recognition') loadRecognitionLive();
@@ -1702,7 +1702,8 @@ function filterEmployees() {
   document.getElementById('employeesTable').innerHTML = employeesTable(rows)
 }
 
-function exportEmployeesCSV() {
+async function exportEmployeesCSV() {
+  if (!data.employees?.length) await loadEmployeesLive();
   let rows = data.employees || [];
   if (!rows.length) {
     toast('لا يوجد بيانات لتصديرها', 'error');
@@ -1789,7 +1790,8 @@ function filterAttendance() {
   document.getElementById('attendanceTable').innerHTML = attendanceTable(rows)
 }
 
-function exportAttendanceCSV() {
+async function exportAttendanceCSV() {
+  if (!data.attendance?.length) await loadAttendanceLive();
   let rows = data.attendance || [];
   if (!rows.length) {
     toast('لا يوجد بيانات لتصديرها', 'error');
@@ -1921,7 +1923,7 @@ async function loadMissionsLive() {
 // Payroll module
 // ==========================================================
 function payrollView() {
-  return pageHead(session.role === 'employee' ? 'راتبي' : 'الرواتب Payroll', 'ملخص الرواتب والبدلات والاستقطاعات', session.role === 'manager' ? `<button class="ghost-btn" onclick="toast('تم تجهيز ملف الرواتب')"><i class="fa-solid fa-download"></i> تصدير</button>` : '') + `<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>الموظف</th><th>الأساسي</th><th>البدلات</th><th>الإضافي</th><th>الاستقطاعات</th><th>الصافي</th><th>الحالة</th><th>التفاصيل</th></tr></thead><tbody id="payrollTable"><tr><td colspan="7" class="empty">جاري تحميل الرواتب...</td></tr></tbody></table></div></div>`
+  return pageHead(session.role === 'employee' ? 'راتبي' : 'الرواتب Payroll', 'ملخص الرواتب والبدلات والاستقطاعات', session.role === 'manager' ? `<button class="primary-btn" onclick="openPayrollModal()"><i class="fa-solid fa-plus"></i> إضافة راتب</button><button class="ghost-btn" onclick="exportPayrollCSV()"><i class="fa-solid fa-download"></i> تصدير</button>` : '') + `<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>الموظف</th><th>الشهر</th><th>الأساسي</th><th>البدلات</th><th>الإضافي</th><th>الاستقطاعات</th><th>الصافي</th><th>الحالة</th><th>${session.role==='manager'?'إجراءات':'التفاصيل'}</th></tr></thead><tbody id="payrollTable"><tr><td colspan="9" class="empty">جاري تحميل الرواتب...</td></tr></tbody></table></div></div>`
 }
 async function loadPayrollLive() {
   let q = supabaseClient.from('payroll_records').select('*, employees(full_name,employee_code)').eq('company_id', session.company_id).order('month', {
@@ -1936,13 +1938,97 @@ async function loadPayrollLive() {
     toast('تعذر تحميل الرواتب — شغّل migration الرواتب', 'error');
     return
   }
+  data.payroll = rows || [];
   window.__payrollRows = Object.fromEntries((rows || []).map(r => [String(r.id), r]));
-  document.getElementById('payrollTable').innerHTML = (rows || []).map(r => `<tr><td><b>${r.employees?.full_name||'—'}</b></td><td>${Number(r.basic_salary||0).toLocaleString()}</td><td>${Number(r.allowances||0).toLocaleString()}</td><td>${Number(r.overtime||0).toLocaleString()}</td><td>${Number(r.deductions||0).toLocaleString()}</td><td><b>${Number(r.net_salary||0).toLocaleString()} ر.س</b></td><td><span class="badge ${r.status==='paid'?'success':'warning'}">${r.status==='paid'?'مدفوع':'مسودة'}</span></td><td><button class="action-btn" title="تفاصيل الراتب" onclick="openPayrollSlip('${r.id}')"><i class="fa-solid fa-eye"></i></button></td></tr>`).join('') || '<tr><td colspan="8" class="empty">لا توجد سجلات رواتب</td></tr>'
+  let isManager = session.role === 'manager';
+  document.getElementById('payrollTable').innerHTML = (rows || []).map(r => `<tr><td><b>${r.employees?.full_name||'—'}</b></td><td class="ltr">${r.month? String(r.month).slice(0,7): '—'}</td><td>${Number(r.basic_salary||0).toLocaleString()}</td><td>${Number(r.allowances||0).toLocaleString()}</td><td>${Number(r.overtime||0).toLocaleString()}</td><td>${Number(r.deductions||0).toLocaleString()}</td><td><b>${Number(r.net_salary||0).toLocaleString()} ر.س</b></td><td><span class="badge ${r.status==='paid'?'success':'warning'}">${r.status==='paid'?'مدفوع':'مسودة'}</span></td><td><button class="action-btn" title="تفاصيل الراتب" onclick="openPayrollSlip('${r.id}')"><i class="fa-solid fa-eye"></i></button>${isManager?`<button class="action-btn" title="تعديل الراتب" onclick="openPayrollModal('${r.id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn" title="حذف الراتب" onclick="deletePayrollRecord('${r.id}')"><i class="fa-solid fa-trash"></i></button>`:''}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">لا توجد سجلات رواتب</td></tr>`
 }
 function openPayrollSlip(recordId) {
   let r = window.__payrollRows?.[String(recordId)];
   if (!r) { toast('لم يتم العثور على سجل الراتب','error'); return }
   openSlip(r.employees?.full_name||'—', r.employees?.employee_code||'—', Number(r.basic_salary||0), Number(r.net_salary||0), Number(r.allowances||0), Number(r.overtime||0), Number(r.deductions||0), r.month||'—', r.status);
+}
+function exportPayrollCSV() {
+  let rows = data.payroll || [];
+  if (!rows.length) {
+    toast('لا يوجد بيانات لتصديرها', 'error');
+    return
+  }
+  let head = ['الموظف', 'الرقم الوظيفي', 'الشهر', 'الأساسي', 'البدلات', 'الإضافي', 'الاستقطاعات', 'الصافي', 'الحالة'];
+  let lines = [head.join(',')].concat(rows.map(r => [r.employees?.full_name || '—', r.employees?.employee_code || '—', r.month ? String(r.month).slice(0, 7) : '—', r.basic_salary || 0, r.allowances || 0, r.overtime || 0, r.deductions || 0, r.net_salary || 0, r.status === 'paid' ? 'مدفوع' : 'مسودة'].map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')));
+  let blob = new Blob(['\ufeff' + lines.join('\n')], {
+    type: 'text/csv;charset=utf-8;'
+  });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.href = url;
+  a.download = 'payroll.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('تم تصدير ملف الرواتب بنجاح')
+}
+function openPayrollModal(recordId = null) {
+  let r = recordId ? window.__payrollRows?.[String(recordId)] : null;
+  if (recordId && !r) { toast('تعذر العثور على سجل الراتب', 'error'); return }
+  let empOptions = data.employees.slice(0, 200).map(e => `<option value="${e.dbId||e.id}" ${r && String(r.employee_id) === String(e.dbId||e.id) ? 'selected' : ''}>${e.name}${e.salary?` (الأساسي الحالي: ${e.salary.toLocaleString()} ر.س)`:''}</option>`).join('');
+  openModal(`<div class="modal-head"><h3>${recordId?'تعديل الراتب':'إضافة راتب لموظف'}</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>الموظف</label><select id="p-emp" class="form-control">${empOptions}</select></div><div class="form-group"><label>الشهر</label><input id="p-month" type="month" class="form-control ltr" value="${r?.month ? String(r.month).slice(0,7) : new Date().toISOString().slice(0,7)}"></div><div class="form-group"><label>الحالة</label><select id="p-status" class="form-control"><option value="draft" ${r && r.status!=='paid'?'selected':''}>مسودة</option><option value="paid" ${r?.status==='paid'?'selected':''}>مدفوع</option></select></div><div class="form-group"><label>الراتب الأساسي</label><input id="p-basic" type="number" class="form-control ltr" value="${r?.basic_salary ?? ''}" oninput="updatePayrollNetPreview()"></div><div class="form-group"><label>البدلات</label><input id="p-allow" type="number" class="form-control ltr" value="${r?.allowances ?? 0}" oninput="updatePayrollNetPreview()"></div><div class="form-group"><label>الإضافي</label><input id="p-ot" type="number" class="form-control ltr" value="${r?.overtime ?? 0}" oninput="updatePayrollNetPreview()"></div><div class="form-group"><label>الاستقطاعات</label><input id="p-ded" type="number" class="form-control ltr" value="${r?.deductions ?? 0}" oninput="updatePayrollNetPreview()"></div><div class="form-group"><label>الصافي (تلقائي)</label><input id="p-net" class="form-control ltr" value="${Number((r?.basic_salary||0)+(r?.allowances||0)+(r?.overtime||0)-(r?.deductions||0)).toLocaleString()}" disabled></div></div></div><div class="modal-foot"><button class="primary-btn" onclick="savePayroll(${recordId?`'${recordId}'`:'null'})">حفظ الراتب</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`);
+  if (!data.employees.length) toast('لا يوجد موظفون بعد — أضف موظفًا أولاً', 'error')
+}
+function updatePayrollNetPreview() {
+  let basic = +document.getElementById('p-basic')?.value || 0;
+  let allow = +document.getElementById('p-allow')?.value || 0;
+  let ot = +document.getElementById('p-ot')?.value || 0;
+  let ded = +document.getElementById('p-ded')?.value || 0;
+  let net = document.getElementById('p-net');
+  if (net) net.value = (basic + allow + ot - ded).toLocaleString()
+}
+async function savePayroll(recordId) {
+  let empId = document.getElementById('p-emp')?.value;
+  let emp = data.employees.find(e => String(e.dbId || e.id) === String(empId));
+  if (!emp) {
+    toast('اختر موظفًا صحيحًا', 'error');
+    return
+  }
+  let basic = +document.getElementById('p-basic').value || 0,
+    allow = +document.getElementById('p-allow').value || 0,
+    ot = +document.getElementById('p-ot').value || 0,
+    ded = +document.getElementById('p-ded').value || 0;
+  let record = {
+    company_id: session.company_id,
+    employee_id: emp.dbId || emp.id,
+    month: (document.getElementById('p-month').value || new Date().toISOString().slice(0, 7)) + '-01',
+    basic_salary: basic,
+    allowances: allow,
+    overtime: ot,
+    deductions: ded,
+    net_salary: basic + allow + ot - ded,
+    status: document.getElementById('p-status').value
+  };
+  let error;
+  if (recordId) {
+    ({ error } = await supabaseClient.from('payroll_records').update(record).eq('id', recordId));
+  } else {
+    ({ error } = await supabaseClient.from('payroll_records').insert(record));
+  }
+  if (error) {
+    toast('تعذر حفظ الراتب: ' + error.message, 'error');
+    return
+  }
+  closeModal();
+  await loadPayrollLive();
+  toast(recordId ? 'تم تحديث الراتب' : 'تم إضافة الراتب — سيظهر للموظف في صفحة راتبي')
+}
+async function deletePayrollRecord(id) {
+  if (!confirm('هل تريد حذف سجل الراتب هذا؟')) return;
+  let { error } = await supabaseClient.from('payroll_records').delete().eq('id', id);
+  if (error) {
+    toast('تعذر حذف السجل: ' + error.message, 'error');
+    return
+  }
+  await loadPayrollLive();
+  toast('تم حذف سجل الراتب')
 }
 // ==========================================================
 // Rules, reports & profile
