@@ -1436,7 +1436,7 @@ function isInviteFlow() {
   return raw.includes('type=invite') || raw.includes('access_token=') || raw.includes('token_hash=')
 }
 
-function startApp() {
+let notificationChannel=null;function subscribeNotifications(){if(!session?.id||notificationChannel)return;notificationChannel=supabaseClient.channel('notifications-'+session.id).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+session.id},payload=>{data.notifications=[payload.new,...(data.notifications||[])];refreshNotificationBadge();toast(payload.new.title||'إشعار جديد')}).subscribe()}function startApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.body.classList.toggle('dark', data.dark);
@@ -2086,23 +2086,7 @@ async function saveAssetLive() {
   openPage('assets');
   toast('تمت إضافة العهدة')
 }
-async function requestAssetAction(assetId, action) {
-  let message = action === 'return' ? 'طلب إرجاع عهدة' : 'طلب صيانة عهدة';
-  let {
-    error
-  } = await supabaseClient.from('notifications').insert({
-    user_id: session.id,
-    title: 'طلب عهدة',
-    message: message + ' #' + assetId
-  });
-  if (error) {
-    toast('تعذر إرسال الطلب: ' + error.message, 'error');
-    return
-  }
-  toast('تم إرسال الطلب')
-}
-
-
+async function requestAssetAction(assetId,action){let message=action==='return'?'طلب إرجاع عهدة':'طلب صيانة عهدة';let {data:managers,error:managerError}=await supabaseClient.from('profiles').select('id').eq('company_id',session.company_id).eq('role','manager');if(managerError||!managers?.length){toast('تعذر العثور على مدير لإرسال الطلب','error');return}let {error}=await supabaseClient.from('notifications').insert(managers.map(m=>({user_id:m.id,title:'طلب عهدة',message:message+' #'+assetId})));if(error){toast('تعذر إرسال الطلب: '+error.message,'error');return}toast('تم إرسال الطلب للمدير')}
 // ==========================================================
 // Documents module
 // ==========================================================
@@ -2328,12 +2312,12 @@ async function approveLeave(id, ok) {
 // Task modal
 // ==========================================================
 function openTaskModal() {
-  openModal(`<div class="modal-head"><h3>إنشاء مهمة جديدة</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>عنوان المهمة</label><input id="t-title" class="form-control" placeholder="مثال: إعداد التقرير الشهري"></div><div class="form-group full"><label>الوصف</label><textarea id="t-desc" class="form-control" rows="2"></textarea></div><div class="form-group"><label>الموظف</label><select id="t-emp" class="form-control">${data.employees.slice(0,10).map(e=>`<option>${e.name}</option>`).join('')}</select></div><div class="form-group"><label>الأولوية</label><select id="t-priority" class="form-control"><option>منخفض</option><option>متوسط</option><option>عالي</option><option>عاجل</option></select></div><div class="form-group"><label>تاريخ الاستحقاق</label><input id="t-due" type="date" class="form-control ltr"></div><div class="form-group"><label>الحالة</label><select id="t-status" class="form-control"><option>جديدة</option><option>قيد التنفيذ</option></select></div></div></div><div class="modal-foot"><button class="primary-btn" onclick="saveTask()">حفظ المهمة</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`)
+  openModal(`<div class="modal-head"><h3>إنشاء مهمة جديدة</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>عنوان المهمة</label><input id="t-title" class="form-control" placeholder="مثال: إعداد التقرير الشهري"></div><div class="form-group full"><label>الوصف</label><textarea id="t-desc" class="form-control" rows="2"></textarea></div><div class="form-group"><label>الموظف</label><select id="t-emp" class="form-control">${data.employees.slice(0,100).map(e=>`<option value="${e.dbId||e.id}">${e.name}</option>`).join('')}</select></div><div class="form-group"><label>الأولوية</label><select id="t-priority" class="form-control"><option>منخفض</option><option>متوسط</option><option>عالي</option><option>عاجل</option></select></div><div class="form-group"><label>تاريخ الاستحقاق</label><input id="t-due" type="date" class="form-control ltr"></div><div class="form-group"><label>الحالة</label><select id="t-status" class="form-control"><option>جديدة</option><option>قيد التنفيذ</option></select></div></div></div><div class="modal-foot"><button class="primary-btn" onclick="saveTask()">حفظ المهمة</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`)
 }
 async function saveTask() {
   let {
     data: emp
-  } = await supabaseClient.from('employees').select('id').eq('company_id', session.company_id).eq('full_name', document.getElementById('t-emp').value).single();
+  } = await supabaseClient.from('employees').select('id').eq('company_id', session.company_id).eq('id', document.getElementById('t-emp').value).single();
   let task = {
     company_id: session.company_id,
     employee_id: emp?.id || null,
@@ -2360,12 +2344,12 @@ async function saveTask() {
 // Mission modal
 // ==========================================================
 function openMissionModal() {
-  openModal(`<div class="modal-head"><h3>إضافة مأمورية</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>عنوان المأمورية</label><input id="mi-title" class="form-control"></div><div class="form-group"><label>الموظف</label><select id="mi-emp" class="form-control">${data.employees.slice(0,10).map(e=>`<option>${e.name}</option>`).join('')}</select></div><div class="form-group"><label>الوجهة</label><input id="mi-dest" class="form-control"></div><div class="form-group full"><label>الغرض</label><input id="mi-purpose" class="form-control"></div><div class="form-group"><label>من</label><input id="mi-start" type="date" class="form-control ltr"></div><div class="form-group"><label>إلى</label><input id="mi-end" type="date" class="form-control ltr"></div><div class="form-group"><label>وسيلة النقل</label><input id="mi-trans" class="form-control"></div><div class="form-group"><label>المصروفات</label><input id="mi-exp" type="number" class="form-control ltr" value="0"></div></div></div><div class="modal-foot"><button class="primary-btn" onclick="saveMission()">حفظ المأمورية</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`)
+  openModal(`<div class="modal-head"><h3>إضافة مأمورية</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>عنوان المأمورية</label><input id="mi-title" class="form-control"></div><div class="form-group"><label>الموظف</label><select id="mi-emp" class="form-control">${data.employees.slice(0,100).map(e=>`<option value="${e.dbId||e.id}">${e.name}</option>`).join('')}</select></div><div class="form-group"><label>الوجهة</label><input id="mi-dest" class="form-control"></div><div class="form-group full"><label>الغرض</label><input id="mi-purpose" class="form-control"></div><div class="form-group"><label>من</label><input id="mi-start" type="date" class="form-control ltr"></div><div class="form-group"><label>إلى</label><input id="mi-end" type="date" class="form-control ltr"></div><div class="form-group"><label>وسيلة النقل</label><input id="mi-trans" class="form-control"></div><div class="form-group"><label>المصروفات</label><input id="mi-exp" type="number" class="form-control ltr" value="0"></div></div></div><div class="modal-foot"><button class="primary-btn" onclick="saveMission()">حفظ المأمورية</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`)
 }
 async function saveMission() {
   let {
     data: emp
-  } = await supabaseClient.from('employees').select('id').eq('company_id', session.company_id).eq('full_name', document.getElementById('mi-emp').value).single();
+  } = await supabaseClient.from('employees').select('id').eq('company_id', session.company_id).eq('id', document.getElementById('mi-emp').value).single();
   let mission = {
     company_id: session.company_id,
     employee_id: emp?.id || null,
@@ -2716,27 +2700,7 @@ function showAttendanceDetails(employee, inTime, outTime, location) {
 function requestMissingPunch(employee) {
   openModal(`<div class="modal-head"><h3>طلب تصحيح بصمة</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><p class="muted">طلب تصحيح حضور/انصراف للموظف <b>${employee}</b></p><div class="form-group"><label>سبب الطلب</label><textarea id="punch-reason" class="form-control" rows="3" placeholder="مثال: نسيت تسجيل الانصراف أمس"></textarea></div></div><div class="modal-foot"><button class="primary-btn" onclick="submitMissingPunch('${employee}')"><i class="fa-solid fa-paper-plane"></i> إرسال الطلب</button><button class="ghost-btn" onclick="closeModal()">إلغاء</button></div>`)
 }
-async function submitMissingPunch(employee) {
-  let reason = document.getElementById('punch-reason').value.trim();
-  if (!reason) {
-    toast('اكتب سبب الطلب', 'error');
-    return
-  }
-  let {
-    error
-  } = await supabaseClient.from('notifications').insert({
-    user_id: session.id,
-    title: 'طلب تصحيح بصمة',
-    message: `طلب تصحيح بصمة لـ ${employee}: ${reason}`
-  });
-  if (error) {
-    toast('تعذر إرسال الطلب: ' + error.message, 'error');
-    return
-  }
-  closeModal();
-  toast('تم إرسال طلب التصحيح للمراجعة')
-}
-
+async function submitMissingPunch(employee){let reason=document.getElementById('punch-reason').value.trim();if(!reason){toast('اكتب سبب الطلب','error');return}let {data:managers,error:managerError}=await supabaseClient.from('profiles').select('id').eq('company_id',session.company_id).eq('role','manager');if(managerError||!managers?.length){toast('تعذر العثور على مدير لإرسال الطلب','error');return}let {error}=await supabaseClient.from('notifications').insert(managers.map(m=>({user_id:m.id,title:'طلب تصحيح بصمة',message:`طلب تصحيح بصمة لـ ${employee}: ${reason}`})));if(error){toast('تعذر إرسال الطلب: '+error.message,'error');return}closeModal();toast('تم إرسال طلب التصحيح للمدير')}
 function showApproval(id) {
   let l = (data.leaves || []).find(x => String(x.id) === String(id));
   if (!l) {
@@ -2848,7 +2812,7 @@ async function refreshNotificationBadge() {
   } = await supabaseClient.from('notifications').select('*', {
     count: 'exact',
     head: true
-  }).eq('user_id', session.id);
+  }).eq('user_id', session.id).is('read_at', null);
   let dot = document.getElementById('notifDot');
   if (!dot) return;
   if (!error && count > 0) dot.classList.remove('hidden');
@@ -2858,3 +2822,4 @@ restoreAuth();
 </script>
 </body>
 </html>
+
